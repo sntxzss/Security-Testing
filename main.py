@@ -1,24 +1,44 @@
-from fastapi import FastAPI
-from pydantic import ValidationError
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+
 import schemas as sch
-from pwdlib import PasswordHash
+from deps import CurrentUser
+from security import create_access_token, hash_password, verify_password
+from store import USERS, new_user_id
 
 app = FastAPI(title="Security testing")
 
-USERS: dict[int, dict] = {}
-next_id = 0
 
 @app.post("/register", status_code=201, response_model=sch.UserRead)
-def app_post():
-    global next_id
-    next_id += 1
-
-    USERS[next_id] = {
-        "id": next_id,
+def register(user: sch.UserCreate):
+    user_id = new_user_id()
+    USERS[user_id] = {
+        "id": user_id,
         "email": user.email,
-        "password_hash": ph.hash(user.password),
+        "password_hash": hash_password(user.password),
     }
+    return USERS[user_id]
 
-    return USERS[next_id]
+@app.post("/login")
+def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    found_user = None
+    for user in USERS.values():
+        if user["email"] == form.username:
+            found_user = user
+            break
 
- 
+    if found_user is None or not verify_password(form.password, found_user["password_hash"]):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = create_access_token(subject=found_user["email"])
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.get("/me", response_model=sch.UserRead)
+def me(current_user: CurrentUser):
+    return current_user
