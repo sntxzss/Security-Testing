@@ -13,6 +13,7 @@ app = FastAPI(title="Security testing")
 
 @app.post("/register", status_code=201, response_model=sch.UserRead)
 def register(user: sch.UserCreate):
+    role = "admin" if len(USERS) == 0 else "user"
     user_id = new_user_id()
     USERS[user_id] = {
         "id": user_id,
