@@ -17,3 +17,13 @@ def require_admin(me: Me) -> dict:
         raise HTTPException(403, "Admins only")
     return me
 
+@app.get("/photos/{photo_id}")
+def one_photo(photo_id: int, me: Me):
+    p = PHOTOS.get(photo_id)
+    if p is None or p["owner"] != me["name"]:
+        raise HTTPException(404, "Photo not found")  
+    return p
+
+@app.get("/admin/stats")
+def stats(admin: Annotated[dict, Depends(require_admin)]):
+    return {"photos": len(PHOTOS), "users": len(USERS)}
