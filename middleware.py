@@ -12,3 +12,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def timing(request: Request, call_next):
+    start = time.perf_counter()  # ДО endpoint-а
+    response = await call_next(request)  # тут працює endpoint
+    ms = (time.perf_counter() - start) * 1000  # ПІСЛЯ endpoint-а
+    response.headers["X-Process-Time"] = f"{ms:.1f}ms"
+    print(f"{request.method} {request.url.path} -> {response.status_code}")
+    return response
+
