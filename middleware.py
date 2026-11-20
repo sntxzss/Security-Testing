@@ -21,3 +21,7 @@ async def timing(request: Request, call_next):
     print(f"{request.method} {request.url.path} -> {response.status_code}")
     return response
 
+@app.get("/hello")
+def hello():
+    return {"msg": "hi"}
+
