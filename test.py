@@ -9,3 +9,13 @@ from fastapi.testclient import TestClient
 SECRET = "dev-secret-change-me-it-must-be-32-bytes-long"
 oauth2 = OAuth2PasswordBearer(tokenUrl="login")
 app = FastAPI()
+
+def make_token(user_id: int) -> str:  # JWT: sub — рядок, exp — час
+    exp = datetime.now(timezone.utc) + timedelta(minutes=30)
+    return jwt.encode({"sub": str(user_id), "exp": exp}, SECRET)
+
+def get_current_user(token: Annotated[str, Depends(oauth2)]) -> int:
+    try:
+        return int(jwt.decode(token, SECRET, algorithms=["HS256"])["sub"])
+    except jwt.InvalidTokenError:
+        raise HTTPException(401, "Bad token", {"WWW-Authenticate": "Bearer"})
